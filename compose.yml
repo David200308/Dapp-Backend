@@ -1,0 +1,51 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3002:3002"
+    environment:
+      JWT_SECRET_KEY_FILE: /run/secrets/dapp_backend_jwt_secret_key
+      JWT_ISSUER_FILE: /run/secrets/dapp_backend_jwt_issuer
+    networks:
+      - dapp-backend-network
+    depends_on:
+        - mysql
+
+  mysql:
+    image: "mysql:latest"
+    ports:
+      - "3306:3306"
+    environment:
+      - 'MYSQL_DATABASE=backend'
+      - 'MYSQL_PASSWORD=backend@db#api'
+      - 'MYSQL_ROOT_PASSWORD=root@db#api'
+      - 'MYSQL_USER=backend'
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
+      - ./mysql.sql:/docker-entrypoint-initdb.d/mysql.sql
+    secrets:
+      - mysql_root_password
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - dapp-backend-network
+
+volumes:
+  mysql_data:
+    driver: local
+
+networks:
+    dapp-backend-network:
+        driver: bridge
+
+secrets:
+  dapp_backend_jwt_secret_key:
+    external: true
+  dapp_backend_jwt_issuer:
+    external: true
